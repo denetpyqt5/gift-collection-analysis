@@ -6,7 +6,8 @@ db = sqlite3.connect('main.db')
 cur = db.cursor()
 cur.execute("CREATE TABLE IF NOT EXISTS nft (number integer, model text)")
 
-def get_info(collection,number,model_):
+
+def get_info(collection, number, model_):
     response = requests.get(f'https://t.me/nft/{collection}-{str(number)}')
     soup = BeautifulSoup(response.text, 'html.parser')
     list = soup.find('meta', property="og:description").get('content').split('\n')
@@ -26,6 +27,6 @@ if len(arr) > 3:
 supply = int(''.join(arr))
 
 for i in range(supply):
-    get_info(user_collection,i,user_model)
+    get_info(user_collection, i, user_model)
 
 db.close()
