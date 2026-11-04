@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import sqlite3
 
-db = sqlite3.connect('main.db')
+db = sqlite3.connect('../../main.db')
 cur = db.cursor()
 cur.execute("CREATE TABLE IF NOT EXISTS nft (number integer, model text)")
 
