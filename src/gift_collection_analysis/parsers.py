@@ -1,24 +1,25 @@
 import asyncio
 import time
+import random
 
 import aiohttp
 from bs4 import BeautifulSoup
 
 
 class Parser:
-    def __init__(self,collection,model):
+    def __init__(self,collection):
         self.collection = collection
-        self.model = model
-        self.nfts = []
+        self.__nfts = {}
 
-    async def __get_info(self,number,session):
+    async def __get_info(self,number,session,sem):
         async with  session.get(f'https://t.me/nft/{self.collection}-{number!s}') as response:
-            soup = BeautifulSoup(await response.text(), 'html.parser')
-            meta_tag = soup.find('meta', property="og:description")
-            description = meta_tag.get('content', '') if meta_tag else ''
-
-            self.nfts.append(description)
-            return description
+            async with sem:
+                soup = BeautifulSoup(await response.text(), 'html.parser')
+                meta_tag = soup.find('meta', property="og:description")
+                description = meta_tag.get('content', '') if meta_tag else ''
+                await asyncio.sleep(random.randint(1,5))
+                self.__nfts[number.__str__()] = description
+                return description
 
     async def __get_amount(self,session):
         async with session.get(f'https://t.me/nft/{self.collection}-1') as response:
@@ -27,36 +28,19 @@ class Parser:
             arr = list(text[text.find('Quantity'):text.find('/')].replace('Quantity', ''))
             if len(arr) > 3:
                 arr.pop(-4)
-
-
-
             num_str = ''.join(arr).strip()
-
-            if num_str:
-                supply = int(num_str)
-            else:
-                supply = 0
-
-
-
+            supply = int(num_str) if num_str else 0
             return  supply
 
     async def main(self):
         async with aiohttp.ClientSession() as session:
-            start = time.time()
             supply = await self.__get_amount(session)
-            tasks = [asyncio.create_task(self.__get_info(i,session)) for i in range(1,supply)]
+            sem = asyncio.Semaphore(3)
+            tasks = [asyncio.create_task(self.__get_info(i,session,sem)) for i in range(1,supply)]
             await asyncio.gather(*tasks)
-
-            for nft in self.nfts:
-                print(nft)
-
-            print(time.time() - start)
-
 
     def run(self):
         asyncio.run(self.main())
 
-if __name__ == "__main__":
-    gem_signet = Parser("GemSignet", "Feral Rage")
-    gem_signet.run()
+        for number,nft in self.__nfts.items():
+            print(number, nft)
